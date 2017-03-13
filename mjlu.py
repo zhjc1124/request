@@ -60,21 +60,29 @@ def main(mails_):
     mm = mails_
     while True:
         flag = 0
-        while flag < 500:
+        while flag < 20:
             flag += 1
-            mail = next(mm)
+            try:
+                mail = next(mm)
+            except StopIteration:
+                with open('undo.txt') as f:
+                    mails = (i for i in f.readlines())
+                with open('undo.txt', 'w') as f:
+                    pass
             try:
                 with connections.cursor() as cursor:
                     cursor.execute('use infos')
                     get_info(mail, cursor)
                     print(mail + '  success')
             except Exception as e:
+                with open('undo.txt', 'a+') as f:
+                    f.write(mail+'\n')
                 mm = (i for i in list(mm) + [mail])
                 time.sleep(30)
-        time.sleep(15)
+        time.sleep(3)
 
 
 if __name__ == '__main__':
     with open('vv.txt') as f:
         mails = (i.split()[0] for i in f.readlines())
-    main2(mails)
+    main(mails)
