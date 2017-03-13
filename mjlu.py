@@ -52,7 +52,7 @@ def get_info(username, cursor):
         ip_info.get('phone', ' '),
         ip_info.get('mac', ' ')
     ]
-    cursor.execute('insert into stu2 values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);', infos)
+    cursor.execute('insert into stu values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);', infos)
     connections.commit()
 
 
@@ -65,18 +65,13 @@ def main(mails_):
             try:
                 mail = next(mm)
             except StopIteration:
-                with open('undo.txt') as f:
-                    mails = (i for i in f.readlines())
-                with open('undo.txt', 'w') as f:
-                    pass
+                break
             try:
                 with connections.cursor() as cursor:
                     cursor.execute('use infos')
                     get_info(mail, cursor)
                     print(mail + '  success')
             except Exception as e:
-                with open('undo.txt', 'a+') as f:
-                    f.write(mail+'\n')
                 mm = (i for i in list(mm) + [mail])
                 time.sleep(30)
         time.sleep(3)
