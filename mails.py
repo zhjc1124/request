@@ -90,7 +90,8 @@ while True:
                 f.write(mail[0] + '\t' + ip + '\n')
                 f.close()
                 print('%s----------------------------------------------------' % mail[0])
-    except Exception:
-        print('*'*20)
+    except Exception as e:
+        print(e)
+        time
 
 
