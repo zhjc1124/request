@@ -6,7 +6,7 @@ from pytesseract import image_to_string
 from random import randint
 import re
 import time
-
+from bs4 import BeautifulSoup
 connect_data = open("/home/db.txt")
 data = connect_data.read().split('\n')
 connections = pymysql.connect(host=data[0], user=data[1], password=data[2], database='studentip', charset=data[4])
@@ -15,16 +15,15 @@ connections = pymysql.connect(host=data[0], user=data[1], password=data[2], data
 ip_addresses = []
 
 
-def ip_generator():
-    with open('ip_addresses.txt', 'r') as f:
-        for interval in f.readlines():
-            floor, ceiling = interval.split('-')
-            floor = floor.split()[0].split('.')
-            ceiling = ceiling.split()[0].split('.')
-            for i in range(int(floor[2]), int(ceiling[2])+1):
-                for j in range(int(floor[3]), int(ceiling[3])+1):
-                    ip = '.'.join(floor[:2]+[str(i), str(j)])
-                    ip_addresses.append(ip)
+with open('ip_addresses.txt', 'r') as f:
+    for interval in f.readlines():
+        floor, ceiling = interval.split('-')
+        floor = floor.split()[0].split('.')
+        ceiling = ceiling.split()[0].split('.')
+        for i in range(int(floor[2]), int(ceiling[2])+1):
+            for j in range(int(floor[3]), int(ceiling[3])+1):
+                ip = '.'.join(floor[:2]+[str(i), str(j)])
+                ip_addresses.append(ip)
 
 # # 排除已有的
 # with connections.cursor() as cursor:
@@ -48,7 +47,6 @@ while True:
             f.write(response.content)
         safecode = image_to_string(Image.open('code.gif'), config='-psm 7 digits')
         print(safecode)
-
         login_url = r'https://ip.jlu.edu.cn/pay/index.php?'
         login_data = 'menu=chklogin&card=' + card + '&pwd=' + pwd + '&imgcode=' + safecode + '&x=' + str(
             randint(1, 43)) + '&y=' + str(randint(1, 23))
@@ -85,55 +83,66 @@ while True:
         while flag < 1000:
             flag = flag + 1
             ip = ip_addresses[0]
-            print(ip)
             post_url = 'https://ip.jlu.edu.cn/pay/guanlian.php?'
-            post_data = 'menu=save_add_ip&ip=' + ip + '&mail=chenzhuo2016%40mails.jlu.edu.cn'
+            post_data = 'menu=save_add_ip&ip=' + ip + '&mail=zhangjc2015%40mails.jlu.edu.cn'
             post_data = post_data.encode()
             headers['Content-Length'] = str(len(post_data))
             headers['Content-Type'] = 'application/x-www-form-urlencoded'
             response = session.post(post_url, data=post_data, headers=headers, verify=False)
-            pattern = re.compile(r'：(.*?)@mails')
+            pattern = re.compile(r'<script>alert\((.*?)\);location.href="index.php";</script>')
             result = response.content.decode('gbk')
-
-            mail = pattern.findall(result)
-            print(mail)
-            if mail:
-                mail = mail[0]
-                info_url = 'http://202.98.18.57:18080/webservice/m/api/proxy'
-                postdata = 'link=http%3A%2F%2Fip.jlu.edu.cn%2Fpay%2Finterface_mobile.php%3Fmenu%3Dget_mail_info%26mail%3D' \
-                           + mail
-                postdata = postdata.encode()
-                headers = {
-                    'Cookie': 'JSESSIONID=' + '',
-                    'Accept-Encoding': 'gzip, deflate',
-                    'Accept': '*/*',
-                    'User-Agent': 'mjida/2.41 CFNetwork/808.2.16 Darwin/16.3.0',
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
-
-                result = session.post(info_url, postdata, headers=headers).content.decode()
-                result = json.loads(result)
-                stu_info = result['resultValue']['content']
-                stu_info = json.loads(stu_info)
-                ip = stu_info.get('ip', [''])[0]
-                ip_info = stu_info.get('ip_info', {}).get(ip, {})
-                infos = [
-                    stu_info.get('mail', mail),
-                    ip,
-                    stu_info.get('name', ' '),
-                    stu_info.get('zhengjianhaoma', ' '),
-                    stu_info.get('class', ''),
-                    ip_info.get('id_name', ' '),
-                    ip_info.get('campus', ' '),
-                    ip_info.get('net_area', ' '),
-                    ip_info.get('home_addr', ' '),
-                    ip_info.get('phone', ' '),
-                    ip_info.get('mac', ' ')
-                ]
+            info = pattern.findall(result)[0]
+            if '不存在' in info:
                 with connections.cursor() as cursor:
-                    cursor.execute('insert into info values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);', infos)
+                    cursor.execute('insert into nope values(%s);', ip)
                     connections.commit()
-            ip_addresses.append(ip_addresses.pop(0))
+            elif '姓名不符' in info:
+                with connections.cursor() as cursor:
+                    cursor.execute('insert into unable values(%s);', ip)
+                    connections.commit()
+            elif '@mails' in info:
+                pattern = re.compile(r'：(.*?)@mails')
+                if mail:
+                    mail = mail[0]
+                    info_url = 'http://202.98.18.57:18080/webservice/m/api/proxy'
+                    postdata = 'link=http%3A%2F%2Fip.jlu.edu.cn%2Fpay%2Finterface_mobile.php%3Fmenu%3Dget_mail_info%26mail%3D' \
+                               + mail
+                    postdata = postdata.encode()
+                    headers = {
+                        'Cookie': 'JSESSIONID=' + '',
+                        'Accept-Encoding': 'gzip, deflate',
+                        'Accept': '*/*',
+                        'User-Agent': 'mjida/2.41 CFNetwork/808.2.16 Darwin/16.3.0',
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+
+                    result = session.post(info_url, postdata, headers=headers).content.decode()
+                    result = json.loads(result)
+                    stu_info = result['resultValue']['content']
+                    stu_info = json.loads(stu_info)
+                    ip = stu_info.get('ip', [''])[0]
+                    ip_info = stu_info.get('ip_info', {}).get(ip, {})
+                    infos = [
+                        stu_info.get('mail', mail),
+                        ip,
+                        stu_info.get('name', ' '),
+                        stu_info.get('zhengjianhaoma', ' '),
+                        stu_info.get('class', ''),
+                        ip_info.get('id_name', ' '),
+                        ip_info.get('campus', ' '),
+                        ip_info.get('net_area', ' '),
+                        ip_info.get('home_addr', ' '),
+                        ip_info.get('phone', ' '),
+                        ip_info.get('mac', ' ')
+                    ]
+                    with connections.cursor() as cursor:
+                        cursor.execute('insert into info values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);', infos)
+                        connections.commit()
+                else:
+                    with connections.cursor() as cursor:
+                        cursor.execute('insert into noknown values(%s);', ip)
+                        connections.commit()
+            ip_addresses.pop(0)
     except Exception as e:
         ip_addresses.append(ip_addresses.pop(0))
         print(e)
