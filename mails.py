@@ -25,6 +25,12 @@ def ip_generator():
                 for j in range(int(floor[3]), int(ceiling[3])+1):
                     ip = '.'.join(floor[:2]+[str(i), str(j)])
                     ip_addresses.append(ip)
+
+# # 排除已有的
+# with connections.cursor() as cursor:
+#     cursor.execute('select ip from info')
+#     ip_addresses = set(ip_addresses) - set([i[0] for i in cursor.fetchall()])
+
 flag = 0
 # login
 card = '20150108849'
@@ -113,10 +119,10 @@ while True:
                 ip_info = stu_info.get('ip_info', {}).get(ip, {})
                 infos = [
                     stu_info.get('mail', mail),
+                    ip,
                     stu_info.get('name', ' '),
                     stu_info.get('zhengjianhaoma', ' '),
                     stu_info.get('class', ''),
-                    ip,
                     ip_info.get('id_name', ' '),
                     ip_info.get('campus', ' '),
                     ip_info.get('net_area', ' '),
@@ -125,7 +131,7 @@ while True:
                     ip_info.get('mac', ' ')
                 ]
                 with connections.cursor() as cursor:
-                    cursor.execute('insert into stu values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);', infos)
+                    cursor.execute('insert into info values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);', infos)
                     connections.commit()
             ip_addresses.append(ip_addresses.pop(0))
     except Exception as e:
