@@ -52,7 +52,7 @@ while True:
                 ip_info.get('mac', ' ')
             ]
             with connections.cursor() as cursor:
-                cursor.execute('insert into valid values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);', infos)
+                cursor.execute('insert into info values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);', infos)
                 connections.commit()
     except Exception as e:
         print(e)
