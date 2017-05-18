@@ -5,12 +5,13 @@ import time
 connect_data = open("/home/db.txt")
 data = connect_data.read().split('\n')
 connections = pymysql.connect(host=data[0], user=data[1], password=data[2], database='studentip', charset=data[4])
-
+print('read')
 with connections.cursor() as cursor:
     cursor.execute('select mail from valid;')
     mails = cursor.fetchall()
     mails = set([mail[0] for mail in mails])
     connections.commit()
+print('finished')
 while True:
     flag = 0
     try:
