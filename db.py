@@ -16,6 +16,7 @@ with connections.cursor() as cursor:
 print('finished')
 while True:
     flag = 0
+    time.sleep(10)
     try:
         while flag<1000:
             flag +=1
@@ -58,5 +59,6 @@ while True:
                 connections.commit()
     except Exception as e:
         print(e)
+        time.sleep(20)
         mails.add(mail)
 
