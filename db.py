@@ -9,7 +9,9 @@ print('read')
 with connections.cursor() as cursor:
     cursor.execute('select mail from valid;')
     mails = cursor.fetchall()
-    mails = set([mail[0] for mail in mails])
+    cursor.execute('select mail from valid;')
+    exists = cursor.fetchall()
+    mails = set([mail[0] for mail in mails]) - set([k[0] for k in exists])
     connections.commit()
 print('finished')
 while True:
