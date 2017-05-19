@@ -137,5 +137,5 @@ while True:
         ip_addresses.append(ip_addresses.pop(0))
         print(e)
         session1.close()
-        time.sleep(20)
+        time.sleep(30)
 

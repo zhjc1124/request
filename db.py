@@ -40,6 +40,11 @@ while True:
             stu_info = json.loads(stu_info)
             ip = stu_info.get('ip', [''])[0]
             print(mail, ip)
+            if not ip:
+                with connections.cursor() as cursor:
+                    sql = 'select ip from valid where mail = "%s"' % mail
+                    cursor.execute(sql)
+                    ip = cursor.fetchall()[0][0]
             ip_info = stu_info.get('ip_info', {}).get(ip, {})
             infos = [
                 stu_info.get('mail', mail),
